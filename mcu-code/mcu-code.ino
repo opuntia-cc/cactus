@@ -112,8 +112,9 @@ void loop() {
                                                  sht31.readTemperature(), sht31.readHumidity(),     // Common sensor
                                                  myENS.getAQI(), myENS.getTVOC(), myENS.getECO2(),  // New device sensors
                                                  myBME280.readFloatHumidity(), myBME280.readFloatPressure());
+      Serial.println(sensorData);
 
-      String serverPath = "http://" + String(ip) + ":8089/sendData?mac=" + String(macAddress) + sensorData;
+      String serverPath = "http://" + ip.toString() + ":8089/sendData?mac=" + String(macAddress) + sensorData;
       Serial.println(serverPath);
 
       http.begin(client, serverPath.c_str());
