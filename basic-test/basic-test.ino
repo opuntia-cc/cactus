@@ -50,7 +50,7 @@ void loop() {
   if ((millis() - lastTime) > timerDelay) {
     Serial.println("SHT31 temp/moisture: " + String(sht31.readTemperature()) + ", " + String(sht31.readHumidity()));
     Serial.println("ENS AQI/TVOC/ECO2: " +  String(myENS.getAQI()) + ", " + String(myENS.getTVOC()) + ", " + String(myENS.getECO2()));
-    Serial.println("BME Humidity/Pressure: " + String(myENS.getAQI()) + ", " + String(myENS.getTVOC()) + ", " + String(myENS.getECO2()));
+    Serial.println("BME Humidity/Pressure: " + String(myBME280.readFloatHumidity()) + ", " + String(myBME280.readFloatPressure()));
 
     lastTime = millis();  // Update last time data was sent
   }
