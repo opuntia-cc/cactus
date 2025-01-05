@@ -48,6 +48,8 @@ void setup() {
 void loop() {
   // Check if it's time to send data
   if ((millis() - lastTime) > timerDelay) {
+    Serial.println(sht31.readTemperature());
+    Serial.println(sht31.readHumidity());
     Serial.println("SHT31 temp/moisture: " + String(sht31.readTemperature()) + ", " + String(sht31.readHumidity()));
     Serial.println("ENS AQI/TVOC/ECO2: " +  String(myENS.getAQI()) + ", " + String(myENS.getTVOC()) + ", " + String(myENS.getECO2()));
     Serial.println("BME Humidity/Pressure: " + String(myBME280.readFloatHumidity()) + ", " + String(myBME280.readFloatPressure()));
