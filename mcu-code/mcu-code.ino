@@ -71,22 +71,18 @@ void setup() {
   Serial.println(macAddress);
 }
 
-String createSensorDataString(float dhtTemp, float dhtHum, float lux,
+String createSensorDataString(float temp,
                               float sht31Temp, float sht31Hum,
                               int aqi, int tvoc, int eco2,
                               float bme280Hum, float bme280Press) {
   String dataString = "";
 
-  // DHT Sensor (Old Device)
-  dataString += "&dht_temp=" + (isnan(dhtTemp) ? "" : String(dhtTemp));
-  dataString += "&dht_hum=" + (isnan(dhtHum) ? "" : String(dhtHum));
-
   // Light Sensor (Old Device)
-  dataString += "&lux=" + (isnan(lux) ? "" : String(lux));
+  dataString += "&temp=" + (isnan(temp) ? "" : String(temp));
 
   // SHT31 Sensor (Common)
-  dataString += "&sht31_temp=" + (isnan(sht31Temp) ? "" : String(sht31Temp));
-  dataString += "&sht31_hum=" + (isnan(sht31Hum) ? "" : String(sht31Hum));
+  dataString += "&soil_temp=" + (isnan(sht31Temp) ? "" : String(sht31Temp));
+  dataString += "&soil_hum=" + (isnan(sht31Hum) ? "" : String(sht31Hum));
 
   // ENS160 Sensor (New Device)
   dataString += "&aqi=" + (aqi < 0 ? "" : String(aqi));
@@ -94,8 +90,8 @@ String createSensorDataString(float dhtTemp, float dhtHum, float lux,
   dataString += "&eco2=" + (eco2 < 0 ? "" : String(eco2));
 
   // BME280 Sensor (New Device)
-  dataString += "&bme280_hum=" + (isnan(bme280Hum) ? "" : String(bme280Hum));
-  dataString += "&bme280_press=" + (isnan(bme280Press) ? "" : String(bme280Press / 100.0));  // Convert to hPa
+  dataString += "&hum=" + (isnan(bme280Hum) ? "" : String(bme280Hum));
+  dataString += "&pressure=" + (isnan(bme280Press) ? "" : String(bme280Press / 100.0));  // Convert to hPa
 
   return dataString;
 }
