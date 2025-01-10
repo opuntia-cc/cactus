@@ -100,18 +100,19 @@ void loop() {
 }
 
 
-void printTemperature(DeviceAddress deviceAddress)
+float printTemperature(DeviceAddress deviceAddress)
 {
   float tempC = sensors.getTempC(deviceAddress);
   if(tempC == DEVICE_DISCONNECTED_C) 
   {
     Serial.println("Error: Could not read temperature data");
-    return;
+    return -1;
   }
   Serial.print("Temp C: ");
   Serial.print(tempC);
   Serial.print(" Temp F: ");
   Serial.println(DallasTemperature::toFahrenheit(tempC)); // Converts tempC to Fahrenheit
+  return tempC;
 }
 
 void printAddress(DeviceAddress deviceAddress)

@@ -4,6 +4,8 @@
 #include "SparkFun_ENS160.h"
 #include "SparkFunBME280.h"
 #include "Adafruit_SHT31.h"
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 // Wi-Fi credentials
 const char *ssid = "mesquite";
@@ -16,13 +18,23 @@ SparkFun_ENS160 myENS;
 BME280 myBME280;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
+// Data wire is plugged into port 2 on the Arduino
+#define ONE_WIRE_BUS 2
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
+
+// arrays to hold device address
+DeviceAddress insideThermometer;
+
 unsigned long lastTime = 0;
 unsigned long timerDelay = 2000;
 
 void setup() {
   Serial.begin(115200);
-
-
 
   Wire.begin(18, 19);
   WiFi.begin(ssid, password);
@@ -65,6 +77,31 @@ void setup() {
 
   myENS.setOperatingMode(SFE_ENS160_STANDARD);
   sht31.begin(0x44);
+
+  Serial.print("Locating DS devices...");
+  sensors.begin();
+  Serial.print("Found ");
+  Serial.print(sensors.getDeviceCount(), DEC);
+  Serial.println(" devices.");
+
+  // report parasite power requirements
+  Serial.print("Parasite power is: "); 
+  if (sensors.isParasitePowerMode()) Serial.println("ON");
+  else Serial.println("OFF");
+
+  if (!sensors.getAddress(insideThermometer, 0)) Serial.println("Unable to find address for Device 0"); 
+
+    Serial.print("Device 0 Address: ");
+  printAddress(insideThermometer);
+  Serial.println();
+
+  // set the resolution to 9 bit (Each Dallas/Maxim device is capable of several different resolutions)
+  sensors.setResolution(insideThermometer, 9);
+ 
+  Serial.print("Device 0 Resolution: ");
+  Serial.print(sensors.getResolution(insideThermometer), DEC); 
+  Serial.println();
+
   macAddress = WiFi.macAddress();  // Get MAC address
 
   // print macAddress
@@ -104,7 +141,9 @@ void loop() {
       WiFiClient client;
       HTTPClient http;
 
-      String sensorData = createSensorDataString(NAN, NAN, NAN,                                     // Old device sensors
+      sensors.requestTemperatures(); 
+
+      String sensorData = createSensorDataString(printTemperature(insideThermometer),                                    // Old device sensors
                                                  sht31.readTemperature(), sht31.readHumidity(),     // Common sensor
                                                  myENS.getAQI(), myENS.getTVOC(), myENS.getECO2(),  // New device sensors
                                                  myBME280.readFloatHumidity(), myBME280.readFloatPressure());
@@ -136,5 +175,30 @@ void loop() {
     }
 
     lastTime = millis();  // Update last time data was sent
+  }
+}
+
+
+float printTemperature(DeviceAddress deviceAddress)
+{
+  float tempC = sensors.getTempC(deviceAddress);
+  if(tempC == DEVICE_DISCONNECTED_C) 
+  {
+    Serial.println("Error: Could not read temperature data");
+    return -1;
+  }
+  Serial.print("Temp C: ");
+  Serial.print(tempC);
+  Serial.print(" Temp F: ");
+  Serial.println(DallasTemperature::toFahrenheit(tempC)); // Converts tempC to Fahrenheit
+  return tempC;
+}
+
+void printAddress(DeviceAddress deviceAddress)
+{
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    if (deviceAddress[i] < 16) Serial.print("0");
+    Serial.print(deviceAddress[i], HEX);
   }
 }
