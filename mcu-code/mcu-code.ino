@@ -8,7 +8,7 @@
 #include <DallasTemperature.h>
 
 // Wi-Fi credentials
-const char *ssid = "mesquite";
+const char *ssid = "mesquiteMocap";
 const char *password = "movement";
 
 String macAddress;
@@ -34,7 +34,11 @@ unsigned long lastTime = 0;
 unsigned long timerDelay = 2000;
 
 void setup() {
+  pinMode(3, OUTPUT);
+  digitalWrite(3, HIGH);
+
   Serial.begin(115200);
+  delay(500);
 
   Wire.begin(18, 19);
   WiFi.begin(ssid, password);
