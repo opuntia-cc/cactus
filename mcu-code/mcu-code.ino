@@ -4,8 +4,8 @@
 #include "SparkFun_ENS160.h"
 #include "SparkFunBME280.h"
 #include "Adafruit_SHT31.h"
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <DHT.h>
+
 
 // Wi-Fi credentials
 const char *ssid = "mesquiteMocap";
@@ -21,14 +21,12 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 // Data wire is plugged into port 2 on the Arduino
 #define ONE_WIRE_BUS 2
 
-// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire oneWire(ONE_WIRE_BUS);
+// Setup a DHT22(AM2302) on data pin 2
+#define DHT22PIN 2
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
 
-// Pass our oneWire reference to Dallas Temperature. 
-DallasTemperature sensors(&oneWire);
-
-// arrays to hold device address
-DeviceAddress insideThermometer;
+//Time variables
 
 unsigned long lastTime = 0;
 unsigned long timerDelay = 2000;
@@ -42,13 +40,13 @@ void setup() {
 
   Wire.begin(18, 19);
   WiFi.begin(ssid, password);
-
+  Serial.print("Connected to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
 
-  Serial.println("Connected to WiFi");
+  Serial.println("\nConnected to WiFi");
 
 
   if (WiFi.hostByName("opuntia.cc", ip)) {
@@ -79,9 +77,32 @@ void setup() {
       count++;
   }
 
+  //cehck if the DHT22 sensor is connected
+  dht.bbgin();
+  macaddress = WiFi.macAddress();
+  serial.print("Mac Address: ");
+  serial.ptintln(mackAddress);
   myENS.setOperatingMode(SFE_ENS160_STANDARD);
   sht31.begin(0x44);
 
+
+// Hlepfer function for DHT22
+float readDHT22Temperature() {
+  float t = dht.readTemperature();
+  if (isnan(t)){
+    Serial.println("Failed to read from DHT sensor!");
+    return -1;
+  }
+  return t;
+}
+float readDHT22Humidity() {
+  float h = dht.readHumidity();
+  if (isnan(h)){
+    Serial.println("Failed to read from DHT sensor!");
+    return -1;
+  }
+  return h;
+}
   Serial.print("Locating DS devices...");
   sensors.begin();
   Serial.print("Found ");
@@ -112,14 +133,20 @@ void setup() {
   Serial.println(macAddress);
 }
 
-String createSensorDataString(float temp,
-                              float sht31Temp, float sht31Hum,
-                              int aqi, int tvoc, int eco2,
-                              float bme280Hum, float bme280Press) {
+String createSensorDataString(float dhtTemp,
+                              float dhtHum,
+                              float sht31Temp,
+                              float sht31Hum,
+                              int aqi,
+                              int tvoc,
+                              int eco2,
+                              float bme280Hum,
+                              float bme280Press) {
   String dataString = "";
 
-  // Light Sensor (Old Device)
-  dataString += "&temp=" + (isnan(temp) ? "" : String(temp));
+  // DHT22 Sensor 
+  dataString += "&DHT22_temp=" + (isnan(dhtTemp) ? "" : String(dhtTemp));
+  dataString += "&DHT22_hum=" + (isnan(dhtHum) ? "" : String(dhtHum));
 
   // SHT31 Sensor (Common)
   dataString += "&soil_temp=" + (isnan(sht31Temp) ? "" : String(sht31Temp));
@@ -138,71 +165,81 @@ String createSensorDataString(float temp,
 }
 
 void loop() {
-
   // Check if it's time to send data
   if ((millis() - lastTime) > timerDelay) {
     if (WiFi.status() == WL_CONNECTED) {
       WiFiClient client;
       HTTPClient http;
-
-      sensors.requestTemperatures(); 
-
-      String sensorData = createSensorDataString(printTemperature(insideThermometer),                                    // Old device sensors
-                                                 sht31.readTemperature(), sht31.readHumidity(),     // Common sensor
-                                                 myENS.getAQI(), myENS.getTVOC(), myENS.getECO2(),  // New device sensors
-                                                 myBME280.readFloatHumidity(), myBME280.readFloatPressure());
-      Serial.println(sensorData);
-
-      String serverPath = "http://" + ip.toString() + ":8089/sendData?mac=" + String(macAddress) + sensorData;
-      Serial.println(serverPath);
-
+      // ---- Read DHT22 (Temperature & Humidity) ----
+      float DHT22_Temp = readDHT22Temperature();
+      float DHT22_Hum  = readDHT22Humidity();
+      Serial.print("DHT22 Temp (C): ");
+      Serial.println(DHT22_Temp);
+      Serial.print("DHT22 Hum (%): ");
+      Serial.println(DHT22_Hum);
+      // ---- Read SHT31 (Temp & Humidity) ----
+      float shtTemp = sht31.readTemperature();
+      float shtHum  = sht31.readHumidity();
+      Serial.print("SHT31 Temp (C): ");
+      Serial.println(shtTemp);
+      Serial.print("SHT31 Hum (%): ");
+      Serial.println(shtHum);
+      // ---- Read ENS160 (AQI, TVOC, eCO2) ----
+      int aqi   = myENS.getAQI();
+      int tvoc  = myENS.getTVOC();
+      int eco2  = myENS.getECO2();
+      Serial.print("ENS160 -> AQI: ");
+      Serial.print(aqi);
+      Serial.print("  TVOC: ");
+      Serial.print(tvoc);
+      Serial.print("  eCO2: ");
+      Serial.println(eco2);
+      // ---- Read BME280 (Humidity & Pressure) ----
+      float bmeHum   = myBME280.readFloatHumidity();
+      float bmePress = myBME280.readFloatPressure();
+      Serial.print("BME280 Hum (%): ");
+      Serial.println(bmeHum);
+      Serial.print("BME280 Pressure (Pa): ");
+      Serial.println(bmePress);
+      // ---- Build the sensor data string for the HTTP GET ----
+      String sensorData = createSensorDataString(
+        DHT22_Temp,      // from DHT22
+        DHT22_Hum,       // from DHT22
+        shtTemp,     // from SHT31
+        shtHum,      // from SHT31
+        aqi,         // from ENS160
+        tvoc,        // from ENS160
+        eco2,        // from ENS160
+        bmeHum,      // from BME280
+        bmePress     // from BME280
+      );
+      // Debug print the data
+      Serial.println("Sensor data: " + sensorData);
+      // ---- Construct the full server path for HTTP GET ----
+      // Example: http://<ip>:8089/sendData?mac=<mac>&am_temp=...&am_hum=...
+      String serverPath = "http://" + ip.toString() + ":8089/sendData?mac="
+                          + String(macAddress)
+                          + sensorData;
+      Serial.println("Server path: " + serverPath);
+      // ---- Send HTTP GET request ----
       http.begin(client, serverPath.c_str());
-
-      // Send HTTP GET request
       int httpResponseCode = http.GET();
-
       // Handle server response
       if (httpResponseCode > 0) {
         Serial.print("HTTP Response code: ");
         Serial.println(httpResponseCode);
         String payload = http.getString();
-        Serial.println(payload);
+        Serial.println("Server response: " + payload);
       } else {
         Serial.print("Error code: ");
         Serial.println(httpResponseCode);
       }
-
-      // Free resources
       http.end();
-    } else {
+    }
+    else {
       Serial.println("WiFi Disconnected");
     }
-
     lastTime = millis();  // Update last time data was sent
-  }
-}
-
-
-float printTemperature(DeviceAddress deviceAddress)
-{
-  float tempC = sensors.getTempC(deviceAddress);
-  if(tempC == DEVICE_DISCONNECTED_C) 
-  {
-    Serial.println("Error: Could not read temperature data");
-    return -1;
-  }
-  Serial.print("Temp C: ");
-  Serial.print(tempC);
-  Serial.print(" Temp F: ");
-  Serial.println(DallasTemperature::toFahrenheit(tempC)); // Converts tempC to Fahrenheit
-  return tempC;
-}
-
-void printAddress(DeviceAddress deviceAddress)
-{
-  for (uint8_t i = 0; i < 8; i++)
-  {
-    if (deviceAddress[i] < 16) Serial.print("0");
-    Serial.print(deviceAddress[i], HEX);
+    Serial.println("------------------------------------");
   }
 }
