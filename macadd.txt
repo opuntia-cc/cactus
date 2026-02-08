@@ -1,0 +1,16 @@
+sensor 1:
+Entering deep sleep for 60 seconds...
+Connecting to WiFi...
+Connected to WiFi
+Resolved domain to IP: 50.112.72.137
+MAC Address: D8:3B:DA:8E:E8:5C
+SHT31 Temp (C): 24.19
+SHT31 Hum (%): 54.40
+ENS160 -> AQI: 4  TVOC: 1219  eCO2: 1054
+BME280 Temp (C): 28.29
+BME280 Hum (%): 37.89
+BME280 Pressure (Pa): 97829.41
+Sensor data: &soil_temp=24.19&soil_hum=54.40&aqi=4&tvoc=1219&eco2=1054&temp=28.29&hum=37.89&pressure=978.29
+Server path: http://50.112.72.137:8089/sendData?mac=D8:3B:DA:8E:E8:5C&soil_temp=24.19&soil_hum=54.40&aqi=4&tvoc=1219&eco2=1054&temp=28.29&hum=37.89&pressure=978.29
+HTTP Response code: 200
+Server response: 1
