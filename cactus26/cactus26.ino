@@ -9,7 +9,7 @@
 #include "Adafruit_SHT31.h"
 
 // ------------------- Wi-Fi Credentials ------------------- //
-const char *ssid     = "mesquite";
+const char *ssid     = "LGMesaroof";
 const char *password = "12345678";
 
 // IPAddress for the server once DNS is resolved
